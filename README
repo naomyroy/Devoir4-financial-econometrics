@@ -1,0 +1,129 @@
+<div align="center">
+
+# MATH 60231: Homework #4
+
+**Professor Anthony Sanford**
+
+</div>
+
+**Instructions:** For this assignment, you are to work in groups of three. I will not make the groups. It is your responsibility to find team members for your homework. If you have trouble finding a team, you can reach out to me via email and I will try to match you with other classmates.
+
+This assignment includes two deliverables submitted separately:
+
+1. A write-up in PDF format. This is your analysis, discussion, and interpretation of results. It must be typeset (not handwritten) and formatted as a proper report, with clearly labelled tables and graphs embedded in the text. Your write-up must contain **no code**.
+2. Your code, in whatever format you prefer (`.py` files, a Jupyter notebook, a Markdown file, etc.). Your code must run from start to finish without errors and must reproduce the results reported in your write-up. It must be clearly annotated so that a reader can follow what you are doing and why.
+
+Failure to submit both components will be treated as an incomplete submission. If you used resources outside of the assigned course materials (including code found online), you must cite the source. Uncited use of external code or text is academic plagiarism. HEC Montréal's policies on plagiarism apply to both your written answers and your code.
+
+For every numerical result you report in your write-up, you must provide a substantive interpretation in the context of financial econometrics. Statements such as "the answer is 0.043" with no further discussion will receive no credit for interpretation.
+
+There are 3 multi-part questions. Points for each part are written below. For each part, there are three possible grades:
+
+- **Check minus (✓−):** You submitted something, but it demonstrates little understanding, is materially incomplete, or consists of bare output with no interpretation. Worth 50%.
+- **Check (✓):** Your answer is correct and complete. This will be the most common grade. Worth 80%.
+- **Check plus (✓+):** Your answer is as good as (or better than) mine — it goes beyond what was asked, demonstrates exceptional insight, or is particularly elegant. Worth 100%. Awarded to fewer than 10% of submissions.
+
+If you submit nothing for a part, you receive a zero for that part.
+
+**Note on code quality:** Comments in your code that help me understand what you were trying to do may improve your grade. Particularly ugly or inelegant Python (e.g. excessive copy-pasting where a loop or function would do, failure to use array operations effectively) may reduce your grade by 10%. You may also lose points if your code does not run correctly or produces results inconsistent with your write-up.
+
+---
+
+## Problem 1 [50 pts], Tests of Asset Pricing Models
+
+**a.** Write a function `Q1_KenFrenchData()` that requires no arguments and returns two objects: **[10 pts]**
+
+- `factors`: a DataFrame containing six columns of monthly data from January 1980 to December 2021, in the following order, drawn from Prof. Ken French's Data Library:
+  - the five factors from `F-F_Research_Data_5_Factors_2x3` (Mkt-RF, SMB, HML, RMW, CMA)
+  - the momentum factor from `F-F_Momentum_Factor`
+- `portfolios`: a DataFrame containing monthly returns on the 17 Industry Portfolios
+
+Make sure that all series in both `factors` and `portfolios` are excess returns (i.e. net of the risk-free rate). You may use `pandas_datareader` or any other method. Report and interpret the first five rows and descriptive statistics of each object.
+
+**b.** Provide descriptive statistics and appropriate graphs for your data. **[10 pts]**
+
+Your graphs must include at minimum: (i) a time-series plot of all six factors; (ii) a time-series plot of the 17 industry portfolio excess returns; (iii) a correlation heatmap of the factors. Make sure all graphs are clearly labelled. In your discussion, address: which factors are most volatile? Which industry portfolios have the highest and lowest mean excess returns? What does the correlation structure of the factors suggest about potential multicollinearity in the asset pricing regressions?
+
+**c.** Write a function `Q1_AssetPricingModel()` that accepts: **[20 pts]**
+
+- a DataFrame `Factors` ($T \times K$) of factor returns
+- a DataFrame `Assets` ($T \times N$) of excess returns on assets or portfolios
+- a boolean `Traded` indicating whether the factors are excess returns on traded assets
+
+The function estimates the linear asset pricing model in two passes:
+
+- **(i) Time-series pass:** For each asset $i = 1, \ldots, N$, regress $r_{it}$ on a constant and the $K$ factors:
+
+$$
+r_{it} = \alpha_i + \boldsymbol{\beta}_i' \mathbf{F}_t + \varepsilon_{it}
+$$
+
+  to obtain estimated loadings $\hat{\boldsymbol{\beta}}_i$ and intercepts $\hat{\alpha}_i$.
+
+- **(ii) Cross-sectional pass:** Regress the $N$ time-series mean excess returns $\bar{r}_i$ on the estimated loadings $\hat{\boldsymbol{\beta}}_i$ to obtain risk premia $\hat{\boldsymbol{\lambda}}$.
+
+The function prints a summary of results and returns:
+
+- a $K \times 1$ array of estimated risk premia $\hat{\boldsymbol{\lambda}}$
+- a $K \times 1$ array of their heteroscedasticity-robust $t$-statistics
+- an $N \times K$ array of estimated factor loadings $\hat{\boldsymbol{\beta}}$
+- an $N \times K$ array of their heteroscedasticity-robust $t$-statistics
+- a scalar $R^2$ from the cross-sectional regression
+- a $3 \times 1$ array containing: the $J$-test statistic, its $p$-value, and the degrees of freedom of its null distribution, for $H_0$ that the model adequately explains all cross-sectional differences in expected excess returns
+
+Apply your function to the data from part (a) with `Traded=True` and `Traded=False`. Report and interpret the results from both calls.
+
+**d.** Use your results from part (c) to answer each of the following questions in 2–3 sentences. **[10 pts]**
+
+- Which factors (if any) earn a statistically significant risk premium when we treat the factors as excess returns on traded assets?
+- Does the $J$-test suggest the model is well-specified, or do some portfolios command a premium unexplained by the six factors?
+- Why does the null distribution of the $J$-test statistic differ depending on whether `Traded` is `True` or `False`? Provide the economic intuition.
+- Given that all six factors (Mkt-RF, SMB, HML, RMW, CMA, Mom) are excess returns on self-financing traded portfolios, which version of the model — `Traded=True` or `Traded=False` — is theoretically appropriate here, and why?
+
+---
+
+## Problem 2 [35 pts], Maximum Likelihood Estimation
+
+For this problem, use the market excess return (**Mkt-RF**) as the dependent variable and the remaining five factors (**SMB, HML, RMW, CMA, Mom**) as regressors, drawing from the same 1980–2021 monthly dataset you built in Problem 1.
+
+**a.** Write a function `Q2_OLSStudentT()` that accepts: **[8 pts]**
+
+- a DataFrame `df` (first column is the dependent variable, remaining columns are regressors)
+- an integer `dof` $> 0$
+
+and performs the following steps:
+
+1. (i) runs OLS of the first column in `df` on a constant and the other columns
+2. (ii) computes the regression residuals $\hat{e}_t$ and their estimated standard deviation $\hat{\sigma}$
+3. (iii) computes the log-likelihood of the model under the assumption that the standardized residuals $\hat{e}_t / \hat{\sigma}$ are i.i.d. $t(\texttt{dof})$
+
+and returns the log-likelihood `llf`.
+
+Apply your function using `dof` $= 5$ and `dof` $= 30$. Report both log-likelihoods and explain the difference: what does a lower log-likelihood at `dof` $= 30$ relative to `dof` $= 5$ (or vice versa) tell you about the tail behavior of the OLS residuals?
+
+**b.** Write a function `Q2_LRTest()` that accepts: **[9 pts]**
+
+- a DataFrame `df`
+- an integer `dof` $> 0$
+
+and uses `Q2_OLSStudentT(df, dof)` to compute the likelihood ratio statistic testing $H_0$ that all coefficients other than the constant equal zero. The function returns:
+
+- the LR statistic
+- its $p$-value
+
+Apply your function using `dof` $= 5$. Report and interpret: (i) what is the restricted model corresponding to $H_0$, and how does its log-likelihood compare to the unrestricted model? (ii) what does the LR test conclude about whether the five factors jointly predict the market excess return? (iii) does the LR statistic change if you use `dof` $= 30$ instead? Explain why or why not.
+
+**c.** Write a function `Q2_ProfileLikelihood()` that accepts: **[9 pts]**
+
+- a DataFrame `df`
+
+and evaluates `Q2_OLSStudentT(df, dof)` at $\texttt{dof}_j = e^{j/12}$ for $j = 0, 1, \ldots, 50$, producing a profile likelihood plot of the log-likelihood as a function of the degrees of freedom. The function returns a $51 \times 2$ array whose first column is $\texttt{dof}_j$ and second column is $\texttt{llf}_j$.
+
+Apply your function and include the plot in your write-up. Report and interpret: (i) describe the shape of the profile likelihood curve — is it monotone, unimodal, or does it have multiple peaks? (ii) approximately where does the profile likelihood achieve its maximum, and what does this imply for the maximum likelihood estimate of the degrees of freedom?
+
+**d.** Using the profile likelihood curve from part (c), identify the approximate MLE of the degrees of freedom and provide a full interpretation. **[9 pts]**
+
+Your answer must address the following four points:
+
+- **(i) The estimate itself:** Read the approximate MLE of `dof` from your plot. The answer is one of: $\approx -1{,}370$; $\approx 1$; $\approx 15$; or $> 60$. State which and explain how you read it from the profile likelihood.
+- **(ii) Tail behavior:** A $t(\nu)$ distribution approaches the standard normal as $\nu \to \infty$ and becomes increasingly heavy-tailed as $\nu \to 2^+$ (and has
